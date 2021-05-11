@@ -5,6 +5,7 @@ import SubsStack from "../screens/SubsStack";
 import OrderStack from "../screens/OrderStack";
 import Modify from "../screens/Modify";
 import Icon from "react-native-vector-icons/FontAwesome5";
+import Map from "../screens/Map";
 
 const Tab = createBottomTabNavigator();
 

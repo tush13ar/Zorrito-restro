@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useLayoutEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,11 @@ import {
   Dimensions,
 } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { useNavigation } from "@react-navigation/native";
+import {
+  CommonActions,
+  StackActions,
+  useNavigation,
+} from "@react-navigation/native";
 import { Card } from "react-native-elements";
 import { FlatList } from "react-native-gesture-handler";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,9 +22,12 @@ import {
   getMeals,
   getMenuItems,
   getPendingSubList,
+  getLunchOrders,
+  getDinnerOrders,
 } from "../store/DBSlice";
 import PendingSub from "./PendingSub";
 import ActiveSub, { ActiveList } from "./ActiveSub";
+import ActiveSubStack from "./ActiveSub";
 
 const { height, width } = Dimensions.get("window");
 
@@ -45,6 +52,8 @@ const PendingList = ({ metaDatas }) => {
       const obj = metaDatas.find((item) => pendingSub.key === item.key);
       return { ...obj, ...pendingSub };
     });
+    console.log("change in pendingList");
+
     setPendingSubDatalist(pendingSubMetaData);
     //console.log("pendingSubMetaData", pendingSubMetaData);
   };
@@ -81,7 +90,7 @@ const PendingList = ({ metaDatas }) => {
   );
 };
 
-const Subscriptions = ({ navigation }) => {
+const Subscriptions = ({ navigation, route }) => {
   const [focusedSub, setFocusedSub] = useState("active");
 
   const dispatch = useDispatch();
@@ -90,19 +99,40 @@ const Subscriptions = ({ navigation }) => {
     userMetaData: { data: metaDatas },
     meals,
     menuItems,
+    lunchOrders,
+    dinnerOrders,
   } = useSelector(getDatabase);
 
   useEffect(() => {
     dispatch(getUsersMetaData());
+    lunchOrders.status === "idle" && dispatch(getLunchOrders());
+    dinnerOrders.status === "idle" && dispatch(getDinnerOrders());
+
     meals.status === "idle" && dispatch(getMeals());
     menuItems.status === "idle" && dispatch(getMenuItems());
   }, []);
 
+  useLayoutEffect(() => {
+    if (route?.params?.navigatorKey) {
+      setFocusedSub("pending");
+      resetAddNewTab();
+    }
+  }, [route.params]);
   // useEffect(() => {
   //   console.log("metaDataList", metaDatas);
   //   console.log("meals", meals);
   //   console.log("menuItems", menuItems);
   // }, [metaDatas, meals, menuItems]);
+  const resetAddNewTab = () => {
+    const { navigatorKey } = route.params;
+    navigation.dispatch({
+      ...CommonActions.reset({
+        index: 1,
+        routes: [{ name: "Details" }],
+      }),
+      target: navigatorKey,
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -153,14 +183,10 @@ const SubsStack = () => {
     authDetails: { userId },
   } = useSelector(getUser);
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name={"Subscriptions"}
-        component={Subscriptions}
-        options={{ headerShown: false }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name={"Subscriptions"} component={Subscriptions} />
       <Stack.Screen name={"Pending"} component={PendingSub} />
-      <Stack.Screen name={"Active"} component={ActiveSub} />
+      <Stack.Screen name={"Active"} component={ActiveSubStack} />
     </Stack.Navigator>
   );
 };

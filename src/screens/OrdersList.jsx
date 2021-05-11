@@ -13,15 +13,44 @@ import { getDatabase, getLunchOrders, getDatabaseRef } from "../store/DBSlice";
 const { height, width } = Dimensions.get("window");
 
 const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
-  const { activeSubList, walletList, meals } = useSelector(getDatabase);
+  const { walletList, meals, lunchOrders, dinnerOrders } = useSelector(
+    getDatabase
+  );
   const [privilege, setPrivilege] = useState(null);
+  const [lunchDelivered, setLunchDelivered] = useState(false);
   useEffect(() => {
-    console.log("allItems", allItems);
+    //console.log("allItems", allItems);
   }, []);
 
+  useEffect(() => {
+    //console.log("newOrdersList", orders);
+  }, [orders, incomingOrders, modifiedOrders]);
+  useEffect(() => {
+    //console.log("incomingOrders", incomingOrders);
+    setPrivilege(incomingOrders[1]?.privilege);
+  }, [incomingOrders, modifiedOrders, orders, lunchOrders, dinnerOrders]);
+
+  useEffect(() => {
+    if (orderType === "Dinner") {
+      checkIfLunchDelivered();
+    }
+  }, [lunchOrders]);
+
+  const checkIfLunchDelivered = () => {
+    console.log("check");
+    const validLunchOrders = lunchOrders.data.filter(
+      (order) => order.status === "incoming" || order.status === "modified"
+    );
+    const isLunchDelivered =
+      validLunchOrders[0]?.privilege === "delivered" ? true : false;
+    setLunchDelivered(isLunchDelivered);
+  };
+
   const changePrivilege = (privilege) => {
-    const activeSubIds = activeSubList.data.map((sub) => sub.key);
-    activeSubIds.forEach((subId) => {
+    const validOrderIds = [...incomingOrders, ...modifiedOrders].map(
+      (order) => order.key
+    );
+    validOrderIds.forEach((subId) => {
       const ref = getDatabaseRef(
         "users/" + "meals/" + orderType + "/" + subId + "/"
       );
@@ -32,10 +61,7 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
   };
 
   const onPressDelivered = () => {
-    const validOrders = orders.filter(
-      (order) => order.status !== "insufficient_funds"
-    );
-    const ordersWithCost = validOrders.map((order) => {
+    const ordersWithCost = orders.map((order) => {
       const cost = Object.keys(order.items).reduce((acc, cur) => {
         const itemCost = order.items[cur].price * order.items[cur].quantity;
         return acc + itemCost;
@@ -51,6 +77,28 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
       });
       return obj;
     });
+    ordersWithWallet
+      .filter(
+        (order) => order.status === "incoming" || order.status === "modified"
+      )
+      .forEach((order) => {
+        // console.log(
+        //   "wallet" +
+        //     typeof order.wallet +
+        //     " " +
+        //     order.wallet +
+        //     "cost" +
+        //     typeof order.cost +
+        //     " " +
+        //     order.cost
+        // );
+        // console.log(order.wallet - order.cost);
+        const walletRef = getDatabaseRef("users/" + "wallet");
+        //console.log(order.key);
+        walletRef.update({
+          [order.key]: order.wallet - order.cost,
+        });
+      });
     if (orderType === "Dinner") {
       const ordersWithOriginalMeal = ordersWithWallet.map((order) => {
         let obj = {};
@@ -64,15 +112,20 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
             itemTypes.forEach((item) => {
               if (meal.details[item]?.timing === "Lunch") {
                 lunchItems[item] = meal.details[item];
+                cost =
+                  cost + meal.details[item].price * meal.details[item].quantity;
               } else if (meal.details[item]?.timing === "Dinner") {
+                console.log("item", meal.details[item]);
                 dinnerItems[item] = meal.details[item];
               } else {
                 lunchItems[item] = meal.details[item];
                 dinnerItems[item] = meal.details[item];
+                cost =
+                  cost + meal.details[item].price * meal.details[item].quantity;
               }
-              cost =
-                cost + meal.details[item].price * meal.details[item].quantity;
             });
+            console.log("lunchItems", lunchItems);
+            console.log("dinnerItems", dinnerItems);
             obj = {
               ...order,
               Lunch: { items: lunchItems, status: "incoming" },
@@ -80,6 +133,7 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
             };
             if (order.status !== "cancelled") {
               let walletAfterCurrentDeduction = order.wallet - order.cost;
+
               if (
                 walletAfterCurrentDeduction >= cost &&
                 walletAfterCurrentDeduction < 2 * cost
@@ -95,34 +149,23 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
         return obj;
       });
       ordersWithOriginalMeal.forEach((order) => {
-        const lunchRef = getDatabaseRef("users/" + "meals/" + "Lunch");
-        const DinnerRef = getDatabaseRef("users/" + "meals/" + "Dinner");
+        const lunchRef = getDatabaseRef(
+          "users/" + "meals/" + "Lunch/" + order.key
+        );
+        const DinnerRef = getDatabaseRef(
+          "users/" + "meals/" + "Dinner/" + order.key
+        );
         lunchRef.set({
-          [order.key]: order.Lunch,
+          ...order.Lunch,
         });
         DinnerRef.set({
-          [order.key]: order.Dinner,
+          ...order.Dinner,
         });
       });
-      //console.log(ordersWithOriginalMeal);
+    } else {
+      changePrivilege("delivered");
     }
-
-    ordersWithWallet
-      .filter(
-        (order) => order.status === "incoming" || order.status === "modified"
-      )
-      .forEach((order) => {
-        const walletRef = getDatabaseRef("users/" + "wallet");
-        walletRef.update({
-          [order.key]: order.wallet - order.cost,
-        });
-      });
-    changePrivilege("delivered");
   };
-
-  useEffect(() => {
-    setPrivilege(incomingOrders[0]?.privilege);
-  }, [incomingOrders, modifiedOrders]);
 
   const allOrders = [...incomingOrders, ...modifiedOrders];
 
@@ -193,29 +236,64 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
         />
       </ScrollView>
       <TouchableOpacity
-        style={[styles.absoluteBtn, { left: width * 0.05, borderRadius: 10 }]}
+        disabled={orderType === "Dinner" ? !lunchDelivered : false}
+        style={[
+          styles.absoluteBtn,
+          {
+            left: width * 0.05,
+            borderRadius: 10,
+            backgroundColor:
+              orderType === "Dinner"
+                ? lunchDelivered
+                  ? "#009387"
+                  : "#00e1cf"
+                : "#009387",
+          },
+        ]}
         onPress={() => {
           changePrivilege("editable");
         }}
       >
         <Text style={{ color: "white" }}>Start Taking Order</Text>
+        {privilege && <Icon name="check-circle" size={18} color={"white"} />}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.absoluteBtn, { right: width * 0.05, borderRadius: 10 }]}
+        disabled={privilege !== "editable"}
+        style={[
+          styles.absoluteBtn,
+          {
+            right: width * 0.05,
+            borderRadius: 10,
+            backgroundColor: !privilege ? "#00e1cf" : "#009387",
+          },
+        ]}
         onPress={() => {
           changePrivilege("confirmed");
         }}
       >
         <Text style={{ color: "white" }}>Confirm Meals</Text>
+        {(privilege === "confirmed" || privilege === "delivered") && (
+          <Icon name="check-circle" size={18} color={"white"} />
+        )}
       </TouchableOpacity>
       <TouchableOpacity
+        disabled={privilege !== "confirmed"}
         style={[
           styles.absoluteBtn,
-          { width: width * 0.9, bottom: 30, left: width * 0.05 },
+          {
+            width: width * 0.9,
+            bottom: 30,
+            left: width * 0.05,
+            backgroundColor:
+              !privilege || privilege === "editable" ? "#00e1cf" : "#009387",
+          },
         ]}
         onPress={onPressDelivered}
       >
         <Text style={{ color: "white" }}>Delivered ({privilege})</Text>
+        {privilege === "delivered" && (
+          <Icon name="check-circle" size={18} color={"white"} />
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -300,7 +378,6 @@ const Orders = ({ orders, orderType }) => {
   const { menuItems, userMetaData, meals, activeSubList } = useSelector(
     getDatabase
   );
-  const dispatch = useDispatch();
 
   const [mealTypes, setMealTypes] = useState([]);
   const [incomingOrders, setIncomingOrders] = useState([]);
@@ -437,8 +514,9 @@ const styles = StyleSheet.create({
     height: 40,
     width: width * 0.425,
     backgroundColor: "#009387",
-    justifyContent: "center",
+    justifyContent: "space-evenly",
     alignItems: "center",
+    flexDirection: "row",
   },
 });
 
