@@ -17,6 +17,8 @@ import firebase from "firebase";
 import { ListEmptyComponent } from "./SubsStack";
 import _ from "lodash";
 import FormError from "../components/FormError";
+import { ContinueBtn } from "../components/ContinueBtn";
+import BackIcon from "../components/BackIcon";
 
 const { height, width } = Dimensions.get("window");
 
@@ -67,7 +69,7 @@ const userModel = t.struct({
   name: t.String,
   phone: t.Number,
   email: t.String,
-  address: t.String,
+  address: t.maybe(t.String),
   mealTitle: t.String,
   mealNum: t.Number,
   mealPrice: t.Number,
@@ -105,12 +107,13 @@ export const PendingSub = ({ route, navigation }) => {
     name: pendingData.name,
     phone: pendingData.mobNum,
     email: pendingData.email,
-    address: pendingData.location.address,
+    address: pendingData?.location?.address,
     mealTitle: null,
     mealNum: pendingData.mealNum,
     mealPrice: null,
     mealId: pendingData.subscriptionId,
   });
+  const [loaderVisible, setLoaderVisible] = useState(false);
   const formRef = useRef();
 
   const { meals } = useSelector(getDatabase);
@@ -139,8 +142,12 @@ export const PendingSub = ({ route, navigation }) => {
 
   const approveSub = async () => {
     let value = formRef.current.getValue();
+    console.log(value);
+
     if (value) {
       try {
+        setLoaderVisible(true);
+        console.log("hi");
         const mealObj =
           meals.data.find((meal) => meal.key === formValue.mealId) || {};
         const itemTypes = Object.keys(mealObj.details);
@@ -193,8 +200,11 @@ export const PendingSub = ({ route, navigation }) => {
         await walletRef.update({
           [pendingData.key]: formValue.mealPrice,
         });
+        setLoaderVisible(false);
         navigation.goBack();
       } catch (error) {
+        alert(error);
+        setLoaderVisible(false);
         console.log(error);
       }
     }
@@ -210,10 +220,9 @@ export const PendingSub = ({ route, navigation }) => {
       style={{
         flex: 1,
         justifyContent: "flex-start",
-        marginTop: 20,
       }}
     >
-      <ScrollView style={{ flex: 1, marginBottom: 70 }}>
+      <ScrollView style={{ flex: 1, marginBottom: 60, marginTop: 60 }}>
         <Form
           ref={formRef}
           type={userModel}
@@ -222,7 +231,19 @@ export const PendingSub = ({ route, navigation }) => {
           options={options}
         />
       </ScrollView>
-      <LinearGradient
+      <BackIcon
+        onPress={() => {
+          navigation.goBack();
+        }}
+      />
+      <ContinueBtn
+        loaderVisible={loaderVisible}
+        label={"Approve"}
+        onPress={approveSub}
+        bottom={10}
+        position={"absolute"}
+      />
+      {/* <LinearGradient
         colors={["#009387", "#23837a", "#1b6e66"]}
         style={{
           height: 40,
@@ -244,7 +265,7 @@ export const PendingSub = ({ route, navigation }) => {
         >
           <Text style={{ color: "white" }}>Approve</Text>
         </TouchableOpacity>
-      </LinearGradient>
+      </LinearGradient> */}
     </View>
   );
 };

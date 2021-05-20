@@ -6,7 +6,10 @@ import { StyleSheet, Switch, ScrollView } from "react-native";
 import { Dimensions } from "react-native";
 
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import BackIcon from "../components/BackIcon";
+import { ContinueBtn } from "../components/ContinueBtn";
+import { Logout, logout } from "../store/AuthSlice";
 import { getDatabase } from "../store/DBSlice";
 
 const { width, height } = Dimensions.get("window");
@@ -14,12 +17,12 @@ const { width, height } = Dimensions.get("window");
 const Details = () => {
   const [name, setName] = useState(null);
   const [phone, setPhone] = useState(null);
-  const [houseNum, setHouseNum] = useState(null);
-  const [landmark, setLandmark] = useState(null);
+
   const [subType, setSubType] = useState(true);
   const [selectedMeal, setSelectedMeal] = useState("m1");
   const { meals } = useSelector(getDatabase);
 
+  const dispatch = useDispatch();
   const navigation = useNavigation();
 
   const onChangeText = (text) => {
@@ -28,14 +31,6 @@ const Details = () => {
 
   const onChangePhone = (val) => {
     setPhone(val);
-  };
-
-  const onChangeHouseNum = (val) => {
-    setHouseNum(val);
-  };
-
-  const onChangeLandmark = (val) => {
-    setLandmark(val);
   };
 
   const onPickerValueChange = (value) => {
@@ -51,12 +46,10 @@ const Details = () => {
       alert("Incorrect Phone number!");
       return;
     }
-    navigation.navigate("Map", {
+    navigation.navigate("Email", {
       name,
       phone,
       selectedMeal,
-      houseNum: houseNum || "",
-      landmark: landmark || "",
       subType,
     });
   };
@@ -66,10 +59,10 @@ const Details = () => {
       style={{
         flex: 1,
         justifyContent: "flex-start",
-        marginTop: 40,
+        backgroundColor: "#FFFFFF",
       }}
     >
-      <ScrollView style={{ flex: 1, marginBottom: 40 }}>
+      <ScrollView style={{ flex: 1, paddingTop: height * 0.12 }}>
         <Text style={styles.label}>Enter User name</Text>
         <TextInput
           style={styles.txtInput}
@@ -82,7 +75,10 @@ const Details = () => {
           style={styles.txtInput}
           placeholder={"10 Digit contact number"}
           value={phone}
-          onChangeText={onChangePhone}
+          onChangeText={(val) => {
+            if (val.toString().length <= 10) onChangePhone(val);
+          }}
+          keyboardType={"phone-pad"}
         />
         <Text style={styles.label}>Meal</Text>
         <View
@@ -137,25 +133,20 @@ const Details = () => {
                   .weeklyPrice.toString()
           }
         />
-        <Text style={styles.label}>Address Info</Text>
-        <Text style={[styles.label, { fontSize: 16, paddingTop: 20 }]}>
-          House/Flat NO.
-        </Text>
-        <TextInput
-          style={styles.txtInput}
-          placeholder={"Optional"}
-          value={houseNum}
-          onChangeText={onChangeHouseNum}
-        />
-        <Text style={[styles.label, { fontSize: 16 }]}>Landmark</Text>
-        <TextInput
-          style={styles.txtInput}
-          placeholder={"Optional"}
-          value={landmark}
-          onChangeText={onChangeLandmark}
+
+        <ContinueBtn
+          label={"Continue"}
+          onPress={onPressContinue}
+          position={"relative"}
+          bottom={0}
         />
       </ScrollView>
-      <LinearGradient
+      <BackIcon
+        onPress={() => {
+          navigation.goBack();
+        }}
+      />
+      {/* <LinearGradient
         colors={["#009387", "#23837a", "#1b6e66"]}
         style={{
           height: 40,
@@ -177,7 +168,7 @@ const Details = () => {
         >
           <Text style={{ color: "white" }}>Continue</Text>
         </TouchableOpacity>
-      </LinearGradient>
+      </LinearGradient> */}
     </View>
   );
 };

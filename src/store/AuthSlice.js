@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import firebase from "firebase";
+import * as dbActions from "./DBSlice";
 
 const initialState = {
   authDetails: { userId: null, userName: null, emailId: null },
@@ -12,32 +13,48 @@ export const getUser = (state) => state.auth;
 export const authenticate = createAsyncThunk(
   "auth/authenticate",
   async (props) => {
-    console.log("dispatched");
-    console.log(props.authType);
-    console.log(props.email);
-    console.log(props.password);
+    // console.log("dispatched");
+    // console.log(props.authType);
+    // console.log(props.email);
+    // console.log(props.password);
     let response;
+
     if (props.authType === "signIn") {
-      response = await firebase
+      response = firebase
         .app("Zorrito-restro")
         .auth()
         .signInWithEmailAndPassword(props.email, props.password);
+      console.log("response", response);
     } else if (props.authType === "signUp") {
-      console.log("hey");
-      try {
-        response = await firebase
-          .app("Zorrito-restro")
-          .auth()
-          .createUserWithEmailAndPassword(props.email, props.password);
-      } catch (error) {
-        console.log(error);
-      }
+      response = firebase
+        .app("Zorrito-restro")
+        .auth()
+        .createUserWithEmailAndPassword(props.email, props.password);
     }
+
+    return response.then((res) => ({
+      userId: res.user.uid,
+      email: res.user.email,
+    }));
+
     //console.log("apps", firebase.apps);
-    console.log(response.user.uid);
-    return { userId: response.user.uid, email: response.user.email };
   }
 );
+
+export const Logout = () => async (dispatch) => {
+  firebase
+    .app("Zorrito-restro")
+    .auth()
+    .signOut()
+    .then((res) => {
+      dispatch(logout());
+      dispatch(dbActions.dbLogout());
+    })
+    .catch((err) => {
+      alert(`Something went wrong!"\n"Please check your Internet Connection.`);
+      console.log(err);
+    });
+};
 
 export const authSlice = createSlice({
   name: "auth",
@@ -53,11 +70,14 @@ export const authSlice = createSlice({
     },
     [authenticate.fulfilled]: (state, action) => {
       state.status = "succeded";
+      console.log(action);
       state.authDetails.userId = action.payload.userId;
       state.authDetails.emailId = action.payload.email;
     },
-    [authenticate.rejected]: (state) => {
+    [authenticate.rejected]: (state, action) => {
+      console.log(action);
       state.status = "failed";
+      state.error = action.error.code;
     },
   },
 });

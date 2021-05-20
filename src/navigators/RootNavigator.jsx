@@ -7,6 +7,7 @@ import SignIn from "../screens/auth/SignIn";
 import { useSelector } from "react-redux";
 import { getUser } from "../store/AuthSlice";
 import RegisterRestro from "../screens/newRestaurant";
+import PassResetScreen from "../screens/auth/PassReset";
 
 const Stack = createStackNavigator();
 
@@ -19,6 +20,7 @@ const RootNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="signIn" component={SignIn} />
       <Stack.Screen name="signUp" component={SignUp} />
+      <Stack.Screen name="passReset" component={PassResetScreen} />
     </Stack.Navigator>
   ) : (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

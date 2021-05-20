@@ -37,7 +37,11 @@ const Menu = ({
   });
 
   useEffect(() => {
-    setNewMenu(mealItems);
+    console.log("mealItems", mealItems);
+  }, []);
+
+  useEffect(() => {
+    setNewMenu(mealItems.map((items) => ({ ...items })));
   }, []);
 
   useEffect(() => {
@@ -48,6 +52,7 @@ const Menu = ({
           badge={newMenu.length}
           paramObj={paramObj}
           navigation={navigation}
+          oldMenu={mealItems}
         />
       ),
     });

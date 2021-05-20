@@ -22,8 +22,9 @@ import {
 import Cart from "./Cart";
 import CustomizeScreen from "./Menu";
 import { ListEmptyComponent } from "./SubsStack";
-import { cos } from "react-native-reanimated";
 import FormError from "../components/FormError";
+import BackIcon from "../components/BackIcon";
+import UserCard from "../components/UserCard";
 
 const { height, width } = Dimensions.get("window");
 
@@ -52,21 +53,15 @@ export const ActiveList = ({ metaDatas }) => {
   }, [activeSubList, metaDatas]);
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={{ width }}
+    <UserCard
+      item={item}
       onPress={() => {
         navigation.navigate("Active", {
           screen: "ActiveSub",
           params: { activeData: item },
         });
       }}
-    >
-      <Card>
-        <Text>Name: {item.name}</Text>
-        <Text>Phone: {item.mobNum}</Text>
-        <Text>Email: {item.email}</Text>
-      </Card>
-    </TouchableOpacity>
+    />
   );
 
   return (
@@ -109,6 +104,7 @@ const ActiveSub = ({ route }) => {
     lunchOrders,
     dinnerOrders,
     menuItems,
+    activeSubList,
   } = useSelector(getDatabase);
   const [form, setForm] = useState({
     name: activeData.name,
@@ -236,7 +232,7 @@ const ActiveSub = ({ route }) => {
     }
   };
 
-  const getMealTitle = () => ({
+  const getSubTitle = () => ({
     subTitle: meals?.data.find((meal) => meal.key === activeData.subscriptionId)
       ?.title,
   });
@@ -252,8 +248,8 @@ const ActiveSub = ({ route }) => {
   }, [walletList.status]);
 
   useEffect(() => {
-    setSubForm(getMealTitle());
-  }, [meals, activeData.subscriptionId, activeData.mealNum]);
+    setSubForm(getSubTitle());
+  }, [meals, activeSubList]);
 
   useEffect(() => {
     setWalletForm(getWallet());
@@ -264,8 +260,8 @@ const ActiveSub = ({ route }) => {
   const walletFormRef = useRef();
 
   return (
-    <View style={{ flex: 1, marginTop: 20 }}>
-      <ScrollView style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
+      <ScrollView style={{ flex: 1, marginTop: 70 }}>
         <Icon
           name={
             metaDataOptions.fields.name.editable &&
@@ -274,7 +270,7 @@ const ActiveSub = ({ route }) => {
               : "pen"
           }
           size={18}
-          style={{ alignSelf: "flex-end", paddingRight: 10, paddingTop: 10 }}
+          style={{ alignSelf: "flex-end", paddingRight: 10 }}
           onPress={() => {
             let options = t.update(metaDataOptions, {
               fields: {
@@ -350,6 +346,7 @@ const ActiveSub = ({ route }) => {
             justifyContent: "space-around",
             alignItems: "center",
             marginTop: 20,
+            paddingBottom: 20,
           }}
         >
           <TouchableOpacity
@@ -368,6 +365,11 @@ const ActiveSub = ({ route }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <BackIcon
+        onPress={() => {
+          navigation.goBack();
+        }}
+      />
     </View>
   );
 };

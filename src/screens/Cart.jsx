@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -8,29 +8,24 @@ import {
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import { ContinueBtn } from "../components/ContinueBtn";
+import { height } from "../constants/size";
 import { getDatabase, setOrder } from "../store/DBSlice";
 
 const Cart = ({
   navigation,
   route: {
-    params: { newMenu, total, userId, mealType, wallet },
+    params: { newMenu, total, userId, mealType, wallet, isMenuChanged },
   },
 }) => {
   const dispatch = useDispatch();
   const { dinnerOrders } = useSelector(getDatabase);
-  const springValue = useRef(new Animated.Value(0)).current;
 
-  // const animate = () => {
-  //   springValue.setValue(0);
-  //   //console.log("start");
-  //   Animated.spring(springValue, {
-  //     toValue: 2,
-  //     friction: 2,
-  //   }).start(({ finished }) => {
-  //     //console.log("springValue", springValue);
-  //     navigation.navigate("CurrentMeal");
-  //   });
-  // };
+  const [loaderVisible, setLoaderVisible] = useState(false);
+
+  useEffect(() => {
+    console.log("isMenuChanged", isMenuChanged);
+  }, []);
 
   const getDinnerOrderDetails = () => {
     const dinnerOrder = dinnerOrders.data.filter(
@@ -84,6 +79,7 @@ const Cart = ({
 
   const onContinue = async (shouldCancelDinner) => {
     try {
+      setLoaderVisible(true);
       const itemsObj = newMenu.reduce((acc, cur) => {
         return {
           ...acc,
@@ -108,6 +104,7 @@ const Cart = ({
       result.then((res) => {
         alert(res);
         console.log(res);
+        setLoaderVisible(false);
         navigation.navigate("ActiveSub");
       });
 
@@ -128,6 +125,7 @@ const Cart = ({
       // );
       //animate();
     } catch (error) {
+      setLoaderVisible(false);
       throw error;
     }
   };
@@ -166,51 +164,15 @@ const Cart = ({
             <Text style={{ marginRight: "10%" }}>{item.quantity}</Text>
           </View>
         ))}
-        {/* <View
-          style={{
-            width: "90%",
-            height: 0,
-            borderWidth: 1,
-            alignSelf: "center",
-            marginVertical: "1%",
-          }}
-        />
-        <Text style={{ alignSelf: "flex-end", marginRight: "9%" }}>
-          Total: {total}
-        </Text> */}
       </ScrollView>
-
-      <TouchableOpacity
-        //disabled={true}
-        style={{
-          backgroundColor: "#009387",
-          width: "70%",
-          height: "8%",
-          position: "absolute",
-          bottom: "2%",
-          left: "15%",
-          borderRadius: 8,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
+      <ContinueBtn
+        loaderVisible={loaderVisible}
+        disabled={!isMenuChanged}
+        position={"absolute"}
         onPress={onContinueAlert}
-      >
-        <Text style={{ color: "white", fontSize: 16, fontWeight: "bold" }}>
-          Continue @ Rs {total}
-        </Text>
-      </TouchableOpacity>
-      {/* <Animated.Image
-        source={require("../../../assets/checkMark.png")}
-        style={{
-          position: "absolute",
-          top: "30%",
-          height: "20%",
-          left: "40%",
-          width: "20%",
-          transform: [{ scale: springValue }],
-        }}
-        resizeMode="contain"
-      /> */}
+        label={`Continue @ Rs ${total}`}
+        bottom={height * 0.01}
+      />
     </View>
   );
 };

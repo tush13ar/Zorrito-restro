@@ -66,7 +66,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-start",
     alignItems: "center",
-    marginTop: "8%",
+    paddingTop: "8%",
+    backgroundColor: "#FFFFFF",
   },
   headerContainer: {
     flexDirection: "row",

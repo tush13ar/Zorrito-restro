@@ -19,30 +19,28 @@ import {
   StackActions,
   useNavigation,
 } from "@react-navigation/native";
+import { ContinueBtn } from "../components/ContinueBtn";
+import ModifyHome from "./ModifyHome";
 
 const { height, width } = Dimensions.get("window");
-
-var Form = t.form.Form;
-
-var addUser = t.struct({
-  email: t.String,
-  password: t.String,
-  confirmPass: t.String,
-});
 
 const Stack = createStackNavigator();
 
 const AddUserStack = () => (
-  <Stack.Navigator>
+  <Stack.Navigator initialRouteName={"ModifyHome"}>
+    <Stack.Screen
+      name="ModifyHome"
+      component={ModifyHome}
+      options={{ headerShown: "false" }}
+    />
     <Stack.Screen
       name="Details"
       component={Details}
       options={{ headerShown: false }}
     />
-    <Stack.Screen name="Map" component={Map} />
 
     <Stack.Screen
-      name="email"
+      name="Email"
       component={Email}
       options={{ headerShown: false }}
     />
@@ -52,11 +50,11 @@ const AddUserStack = () => (
 const Email = ({ route }) => {
   const navigation = useNavigation();
   const [email, setEmail] = useState(null);
+  const [loaderVisible, setLoaderVisible] = useState(false);
 
   const generateRandomNum = () => {
     const num = Math.floor(Math.random() * 100000000);
     return num;
-    console.log("num", num);
   };
 
   const createNewUser = async () => {
@@ -66,23 +64,16 @@ const Email = ({ route }) => {
       )
     ) {
       try {
-        const pass = generateRandomNum().toString();
+        // const pass = generateRandomNum().toString();
+        setLoaderVisible(true);
+        const pass = "12345678";
         const response = await firebase
           .app("Zorrito-restro")
           .auth()
           .createUserWithEmailAndPassword(email, pass);
         console.log("response", response);
         if (response.user) {
-          const {
-            name,
-            phone,
-            houseNum,
-            landmark,
-            selectedMeal,
-            subType,
-            address,
-            coord,
-          } = route.params;
+          const { name, phone, selectedMeal, subType } = route.params;
           const userId = response.user.uid;
           const subDetails = {
             subscriptionId: selectedMeal,
@@ -93,7 +84,6 @@ const Email = ({ route }) => {
             name,
             mobNum: phone,
             email,
-            location: { address, coord, houseNo: houseNum, landmark },
           };
           const updates = {};
           updates["/pendingSubscription/" + userId] = subDetails;
@@ -106,6 +96,7 @@ const Email = ({ route }) => {
               if (error) {
                 alert("Subscription can't be added!");
               } else {
+                setLoaderVisible(false);
                 navigation.navigate("Subscriptions", {
                   screen: "Subscriptions",
                   params: {
@@ -155,29 +146,13 @@ const Email = ({ route }) => {
         value={email}
         onChangeText={onChangeText}
       />
-      <LinearGradient
-        colors={["#009387", "#23837a", "#1b6e66"]}
-        style={{
-          height: 40,
-          width: width * 0.9,
-          position: "absolute",
-          left: width * 0.05,
-          borderRadius: 20,
-          bottom: 30,
-        }}
-      >
-        <TouchableOpacity
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            width: width * 0.9,
-            height: 40,
-          }}
-          onPress={createNewUser}
-        >
-          <Text style={{ color: "white" }}>Continue</Text>
-        </TouchableOpacity>
-      </LinearGradient>
+      <ContinueBtn
+        position={"absolute"}
+        onPress={createNewUser}
+        bottom={height * 0.05}
+        label={"Create"}
+        loaderVisible={loaderVisible}
+      />
     </View>
   );
 };

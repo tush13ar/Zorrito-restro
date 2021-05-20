@@ -389,6 +389,10 @@ export const dbSlice = createSlice({
     removeFromWalletList: (state, action) => {
       state.walletList.data = action.payload;
     },
+    dbLogout: (state, action) => {
+      state = initialState;
+      console.log("db loggedout");
+    },
   },
   extraReducers: {
     // [getMenuItems.fulfilled]: (state, action) => {
@@ -437,6 +441,8 @@ export const setOrder = async (data) => {
 };
 
 export default dbSlice.reducer;
+
+export const { dbLogout } = dbSlice.actions;
 
 // export const registerRestro = createAsyncThunk(
 //   "db/registerRestro",

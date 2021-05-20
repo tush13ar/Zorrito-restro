@@ -5,11 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Image,
 } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
 import {
   CommonActions,
   StackActions,
+  useFocusEffect,
   useNavigation,
 } from "@react-navigation/native";
 import { Card } from "react-native-elements";
@@ -28,20 +30,43 @@ import {
 import PendingSub from "./PendingSub";
 import ActiveSub, { ActiveList } from "./ActiveSub";
 import ActiveSubStack from "./ActiveSub";
+import { colors } from "../constants/colors";
+import { useRef } from "react";
+import { cos } from "react-native-reanimated";
+import { useCallback } from "react";
+import Icon from "react-native-vector-icons/FontAwesome5";
+import { Linking } from "react-native";
+import UserCard from "../components/UserCard";
 
 const { height, width } = Dimensions.get("window");
 
 const Stack = createStackNavigator();
 
-export const ListEmptyComponent = () => (
-  <View style={styles.emptyListComp}>
-    <Text>Nothing to show here.</Text>
-  </View>
-);
+export const ListEmptyComponent = ({ img }) => {
+  const source =
+    img === "iceCream"
+      ? require("../../assets/droppedIceCream.png")
+      : require("../../assets/spilledDrink.png");
 
-const PendingList = ({ metaDatas }) => {
+  return (
+    <View style={styles.emptyListComp}>
+      <Image
+        source={source}
+        style={{ height: width * 0.4, width: width * 0.6 }}
+        resizeMode={"center"}
+      />
+      <Text style={{ paddingTop: 10, fontSize: 20, color: colors.complement }}>
+        Nothing to show here.
+      </Text>
+    </View>
+  );
+};
+
+const PendingList = ({ metaDatas, shouldScrollToBottom }) => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+
+  const listRef = useRef();
 
   const [pendingSubDataList, setPendingSubDatalist] = useState([]);
 
@@ -58,6 +83,17 @@ const PendingList = ({ metaDatas }) => {
     //console.log("pendingSubMetaData", pendingSubMetaData);
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      shouldScrollToBottom && listRef.current.scrollToEnd();
+    }, [shouldScrollToBottom])
+  );
+
+  // useLayoutEffect(() => {
+  //   console.log("stb", shouldScrollToBottom);
+  //   shouldScrollToBottom && listRef.current.scrollToEnd();
+  // }, [shouldScrollToBottom]);
+
   useEffect(() => {
     pendingSubList.status === "idle" && dispatch(getPendingSubList());
   }, [pendingSubList]);
@@ -67,22 +103,17 @@ const PendingList = ({ metaDatas }) => {
   }, [pendingSubList, metaDatas]);
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={{ width }}
+    <UserCard
+      item={item}
       onPress={() => {
         navigation.navigate("Pending", { pendingData: item });
       }}
-    >
-      <Card>
-        <Text>Name: {item.name}</Text>
-        <Text>Phone: {item.mobNum}</Text>
-        <Text>Email: {item.email}</Text>
-      </Card>
-    </TouchableOpacity>
+    />
   );
 
   return (
     <FlatList
+      ref={listRef}
       data={pendingSubDataList || []}
       renderItem={renderItem}
       ListEmptyComponent={ListEmptyComponent}
@@ -92,6 +123,7 @@ const PendingList = ({ metaDatas }) => {
 
 const Subscriptions = ({ navigation, route }) => {
   const [focusedSub, setFocusedSub] = useState("active");
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
 
   const dispatch = useDispatch();
 
@@ -114,16 +146,13 @@ const Subscriptions = ({ navigation, route }) => {
 
   useLayoutEffect(() => {
     if (route?.params?.navigatorKey) {
+      setShouldScrollToBottom(true);
       setFocusedSub("pending");
-      resetAddNewTab();
+      resetAddNewUserTab();
     }
   }, [route.params]);
-  // useEffect(() => {
-  //   console.log("metaDataList", metaDatas);
-  //   console.log("meals", meals);
-  //   console.log("menuItems", menuItems);
-  // }, [metaDatas, meals, menuItems]);
-  const resetAddNewTab = () => {
+
+  const resetAddNewUserTab = () => {
     const { navigatorKey } = route.params;
     navigation.dispatch({
       ...CommonActions.reset({
@@ -170,7 +199,10 @@ const Subscriptions = ({ navigation, route }) => {
         </View>
       </View>
       {focusedSub === "pending" ? (
-        <PendingList metaDatas={metaDatas} navigation={navigation} />
+        <PendingList
+          metaDatas={metaDatas}
+          shouldScrollToBottom={shouldScrollToBottom}
+        />
       ) : (
         <ActiveList metaDatas={metaDatas} navigation={navigation} />
       )}
@@ -194,9 +226,9 @@ const SubsStack = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "flex-start",
     alignItems: "center",
-    marginTop: "8%",
+    paddingTop: "8%",
+    backgroundColor: "#FFFFFF",
   },
   headerContainer: {
     flexDirection: "row",
@@ -208,8 +240,9 @@ const styles = StyleSheet.create({
   },
   emptyListComp: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
+    marginTop: height * 0.25,
   },
 });
 export default SubsStack;

@@ -3,21 +3,30 @@ import { FlatList } from "react-native";
 import { Dimensions } from "react-native";
 import { TouchableOpacity } from "react-native";
 import { Modal } from "react-native";
+import { ActivityIndicator } from "react-native";
 import { StyleSheet } from "react-native";
-import { ScrollView, View, Text, Flatlist } from "react-native";
+import { ScrollView, View, Text, Flatlist, Alert } from "react-native";
 import { Card } from "react-native-elements";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import { useDispatch, useSelector } from "react-redux";
 import { getDatabase, getLunchOrders, getDatabaseRef } from "../store/DBSlice";
+import { ListEmptyComponent } from "./SubsStack";
 
 const { height, width } = Dimensions.get("window");
 
-const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
-  const { walletList, meals, lunchOrders, dinnerOrders } = useSelector(
-    getDatabase
-  );
+const ChefView = ({
+  incomingOrders,
+  modifiedOrders,
+  orderType,
+  orders,
+  setModalVisible,
+}) => {
+  const { walletList, meals, lunchOrders, dinnerOrders } =
+    useSelector(getDatabase);
   const [privilege, setPrivilege] = useState(null);
   const [lunchDelivered, setLunchDelivered] = useState(false);
+  const [loaderVisible, setLoaderVisible] = useState(false);
+
   useEffect(() => {
     //console.log("allItems", allItems);
   }, []);
@@ -25,6 +34,7 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
   useEffect(() => {
     //console.log("newOrdersList", orders);
   }, [orders, incomingOrders, modifiedOrders]);
+
   useEffect(() => {
     //console.log("incomingOrders", incomingOrders);
     setPrivilege(incomingOrders[1]?.privilege);
@@ -47,123 +57,148 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
   };
 
   const changePrivilege = (privilege) => {
+    setLoaderVisible(true);
     const validOrderIds = [...incomingOrders, ...modifiedOrders].map(
       (order) => order.key
     );
-    validOrderIds.forEach((subId) => {
-      const ref = getDatabaseRef(
-        "users/" + "meals/" + orderType + "/" + subId + "/"
-      );
-      ref.update({
-        privilege,
+    try {
+      validOrderIds.forEach(async (subId) => {
+        const ref = getDatabaseRef(
+          "users/" + "meals/" + orderType + "/" + subId + "/"
+        );
+        await ref.update({
+          privilege,
+        });
       });
-    });
+      setLoaderVisible(false);
+    } catch (error) {
+      alert(error);
+      setLoaderVisible(false);
+    }
   };
 
   const onPressDelivered = () => {
-    const ordersWithCost = orders.map((order) => {
-      const cost = Object.keys(order.items).reduce((acc, cur) => {
-        const itemCost = order.items[cur].price * order.items[cur].quantity;
-        return acc + itemCost;
-      }, 0);
-      return { ...order, cost };
-    });
-    const ordersWithWallet = ordersWithCost.map((order) => {
-      let obj = {};
-      walletList.data.forEach((wallet) => {
-        if (wallet.key === order.key) {
-          obj = { ...order, wallet: wallet.amount };
-        }
+    try {
+      setLoaderVisible(true);
+      const ordersWithCost = orders.map((order) => {
+        const cost = Object.keys(order.items).reduce((acc, cur) => {
+          const itemCost = order.items[cur].price * order.items[cur].quantity;
+          return acc + itemCost;
+        }, 0);
+        return { ...order, cost };
       });
-      return obj;
-    });
-    ordersWithWallet
-      .filter(
-        (order) => order.status === "incoming" || order.status === "modified"
-      )
-      .forEach((order) => {
-        // console.log(
-        //   "wallet" +
-        //     typeof order.wallet +
-        //     " " +
-        //     order.wallet +
-        //     "cost" +
-        //     typeof order.cost +
-        //     " " +
-        //     order.cost
-        // );
-        // console.log(order.wallet - order.cost);
-        const walletRef = getDatabaseRef("users/" + "wallet");
-        //console.log(order.key);
-        walletRef.update({
-          [order.key]: order.wallet - order.cost,
-        });
-      });
-    if (orderType === "Dinner") {
-      const ordersWithOriginalMeal = ordersWithWallet.map((order) => {
+      const ordersWithWallet = ordersWithCost.map((order) => {
         let obj = {};
-
-        meals.data.forEach((meal) => {
-          if (meal.key === order.subscriptionId) {
-            const itemTypes = Object.keys(meal.details);
-            let lunchItems = {};
-            let dinnerItems = {};
-            let cost = 0;
-            itemTypes.forEach((item) => {
-              if (meal.details[item]?.timing === "Lunch") {
-                lunchItems[item] = meal.details[item];
-                cost =
-                  cost + meal.details[item].price * meal.details[item].quantity;
-              } else if (meal.details[item]?.timing === "Dinner") {
-                console.log("item", meal.details[item]);
-                dinnerItems[item] = meal.details[item];
-              } else {
-                lunchItems[item] = meal.details[item];
-                dinnerItems[item] = meal.details[item];
-                cost =
-                  cost + meal.details[item].price * meal.details[item].quantity;
-              }
-            });
-            console.log("lunchItems", lunchItems);
-            console.log("dinnerItems", dinnerItems);
-            obj = {
-              ...order,
-              Lunch: { items: lunchItems, status: "incoming" },
-              Dinner: { items: dinnerItems, status: "incoming" },
-            };
-            if (order.status !== "cancelled") {
-              let walletAfterCurrentDeduction = order.wallet - order.cost;
-
-              if (
-                walletAfterCurrentDeduction >= cost &&
-                walletAfterCurrentDeduction < 2 * cost
-              ) {
-                obj.Dinner.status = "insufficient_funds";
-              } else if (walletAfterCurrentDeduction < cost) {
-                obj.Lunch.status = "insufficient_funds";
-                obj.Dinner.status = "insufficient_funds";
-              }
-            }
+        walletList.data.forEach((wallet) => {
+          if (wallet.key === order.key) {
+            obj = { ...order, wallet: wallet.amount };
           }
         });
         return obj;
       });
-      ordersWithOriginalMeal.forEach((order) => {
-        const lunchRef = getDatabaseRef(
-          "users/" + "meals/" + "Lunch/" + order.key
-        );
-        const DinnerRef = getDatabaseRef(
-          "users/" + "meals/" + "Dinner/" + order.key
-        );
-        lunchRef.set({
-          ...order.Lunch,
+      ordersWithWallet
+        .filter(
+          (order) => order.status === "incoming" || order.status === "modified"
+        )
+        .forEach(async (order) => {
+          // console.log(
+          //   "wallet" +
+          //     typeof order.wallet +
+          //     " " +
+          //     order.wallet +
+          //     "cost" +
+          //     typeof order.cost +
+          //     " " +
+          //     order.cost
+          // );
+          // console.log(order.wallet - order.cost);
+          const walletRef = getDatabaseRef("users/" + "wallet");
+          //console.log(order.key);
+          await walletRef.update({
+            [order.key]: order.wallet - order.cost,
+          });
         });
-        DinnerRef.set({
-          ...order.Dinner,
+      if (orderType === "Dinner") {
+        const ordersWithOriginalMeal = ordersWithWallet.map((order) => {
+          let obj = {};
+
+          meals.data.forEach((meal) => {
+            if (meal.key === order.subscriptionId) {
+              const itemTypes = Object.keys(meal.details);
+              let lunchItems = {};
+              let dinnerItems = {};
+              let cost = 0;
+              itemTypes.forEach((item) => {
+                if (meal.details[item]?.timing === "Lunch") {
+                  lunchItems[item] = meal.details[item];
+                  cost =
+                    cost +
+                    meal.details[item].price * meal.details[item].quantity;
+                } else if (meal.details[item]?.timing === "Dinner") {
+                  console.log("item", meal.details[item]);
+                  dinnerItems[item] = meal.details[item];
+                } else {
+                  lunchItems[item] = meal.details[item];
+                  dinnerItems[item] = meal.details[item];
+                  cost =
+                    cost +
+                    meal.details[item].price * meal.details[item].quantity;
+                }
+              });
+              console.log("lunchItems", lunchItems);
+              console.log("dinnerItems", dinnerItems);
+              obj = {
+                ...order,
+                Lunch: { items: lunchItems, status: "incoming" },
+                Dinner: { items: dinnerItems, status: "incoming" },
+              };
+              if (order.status !== "cancelled") {
+                let walletAfterCurrentDeduction = order.wallet - order.cost;
+
+                if (
+                  walletAfterCurrentDeduction >= cost &&
+                  walletAfterCurrentDeduction < 2 * cost
+                ) {
+                  obj.Dinner.status = "insufficient_funds";
+                } else if (walletAfterCurrentDeduction < cost) {
+                  obj.Lunch.status = "insufficient_funds";
+                  obj.Dinner.status = "insufficient_funds";
+                }
+              }
+            }
+          });
+          return obj;
         });
-      });
-    } else {
-      changePrivilege("delivered");
+        ordersWithOriginalMeal.forEach(async (order) => {
+          const lunchRef = getDatabaseRef(
+            "users/" + "meals/" + "Lunch/" + order.key
+          );
+          const DinnerRef = getDatabaseRef(
+            "users/" + "meals/" + "Dinner/" + order.key
+          );
+          await lunchRef.set({
+            ...order.Lunch,
+          });
+          await DinnerRef.set({
+            ...order.Dinner,
+          });
+        });
+      } else {
+        changePrivilege("delivered");
+      }
+      setLoaderVisible(false);
+
+      Alert.alert("Message", "Status Updated", [
+        {
+          text: "OK",
+          onPress: () => {
+            setModalVisible(false);
+          },
+        },
+      ]);
+    } catch (error) {
+      setLoaderVisible(false);
+      alert(error);
     }
   };
 
@@ -194,7 +229,7 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView>
+      <ScrollView style={{ paddingBottom: height * 0.25 }}>
         <View
           style={{
             flexDirection: "row",
@@ -241,7 +276,7 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
           styles.absoluteBtn,
           {
             left: width * 0.05,
-            borderRadius: 10,
+            borderRadius: 15,
             backgroundColor:
               orderType === "Dinner"
                 ? lunchDelivered
@@ -254,7 +289,9 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
           changePrivilege("editable");
         }}
       >
-        <Text style={{ color: "white" }}>Start Taking Order</Text>
+        <Text style={{ color: "white", paddingRight: 5 }}>
+          Start Taking Order
+        </Text>
         {privilege && <Icon name="check-circle" size={18} color={"white"} />}
       </TouchableOpacity>
       <TouchableOpacity
@@ -263,7 +300,7 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
           styles.absoluteBtn,
           {
             right: width * 0.05,
-            borderRadius: 10,
+            borderRadius: 15,
             backgroundColor: !privilege ? "#00e1cf" : "#009387",
           },
         ]}
@@ -271,7 +308,7 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
           changePrivilege("confirmed");
         }}
       >
-        <Text style={{ color: "white" }}>Confirm Meals</Text>
+        <Text style={{ color: "white", paddingRight: 5 }}>Confirm Meals</Text>
         {(privilege === "confirmed" || privilege === "delivered") && (
           <Icon name="check-circle" size={18} color={"white"} />
         )}
@@ -283,6 +320,7 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
           {
             width: width * 0.9,
             bottom: 30,
+            borderRadius: 20,
             left: width * 0.05,
             backgroundColor:
               !privilege || privilege === "editable" ? "#00e1cf" : "#009387",
@@ -290,11 +328,22 @@ const ChefView = ({ incomingOrders, modifiedOrders, orderType, orders }) => {
         ]}
         onPress={onPressDelivered}
       >
-        <Text style={{ color: "white" }}>Delivered ({privilege})</Text>
+        <Text style={{ color: "white", paddingRight: 5 }}>Delivered</Text>
         {privilege === "delivered" && (
           <Icon name="check-circle" size={18} color={"white"} />
         )}
       </TouchableOpacity>
+      {loaderVisible && (
+        <ActivityIndicator
+          size={"small"}
+          color={"blue"}
+          style={{
+            position: "absolute",
+            left: width * 0.48,
+            bottom: height * 0.45,
+          }}
+        />
+      )}
     </View>
   );
 };
@@ -310,7 +359,11 @@ const MealTypeCard = ({ type, orders }) => {
           justifyContent: "space-between",
           alignItems: "center",
         }}
-        containerStyle={{ width: width * 0.9, backgroundColor: "#009387" }}
+        containerStyle={{
+          width: width * 0.9,
+          backgroundColor: "#009387",
+          borderWidth: 0,
+        }}
       >
         <Text style={{ fontSize: 20, color: "white" }}>{type}</Text>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -375,9 +428,8 @@ const OrderCard = ({ order }) => {
 };
 
 const Orders = ({ orders, orderType }) => {
-  const { menuItems, userMetaData, meals, activeSubList } = useSelector(
-    getDatabase
-  );
+  const { menuItems, userMetaData, meals, activeSubList } =
+    useSelector(getDatabase);
 
   const [mealTypes, setMealTypes] = useState([]);
   const [incomingOrders, setIncomingOrders] = useState([]);
@@ -457,6 +509,10 @@ const Orders = ({ orders, orderType }) => {
     activeSubList,
   ]);
 
+  useEffect(() => {
+    console.log("mealTypes", mealTypes);
+  }, [mealTypes]);
+
   const renderItem = ({ item }) => {
     const ordersOfThisType = incomingOrders.filter(
       (order) => order.subTitle === item
@@ -464,47 +520,42 @@ const Orders = ({ orders, orderType }) => {
     return <MealTypeCard orders={ordersOfThisType} type={item} key={item} />;
   };
 
-  return (
-    <ScrollView>
-      <TouchableOpacity
-        style={{
-          flexDirection: "row",
-          justifyContent: "flex-end",
-          marginTop: 15,
-          marginRight: 5,
-        }}
-        onPress={() => {
-          setModalVisible(true);
-        }}
-      >
-        <Text style={{ color: "#009387", paddingRight: 5 }}>Chef's View</Text>
-        <Icon name={"eye"} size={20} color={"#009387"} />
-      </TouchableOpacity>
-      <Modal
-        visible={modalVisible}
-        onRequestClose={() => {
-          setModalVisible(false);
-        }}
-      >
-        <ChefView
-          incomingOrders={incomingOrders}
-          modifiedOrders={modifiedOrders}
-          orderType={orderType}
-          orders={updatedOrders}
-        />
-      </Modal>
-      <MealTypeCard orders={modifiedOrders} type={"Modified"} />
-      <FlatList
-        data={mealTypes}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <View>
-            <Text>Empty List</Text>
-          </View>
-        }
-      />
-    </ScrollView>
-  );
+  if (mealTypes.length || modifiedOrders.length) {
+    return (
+      <ScrollView>
+        <TouchableOpacity
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            marginTop: 15,
+            marginRight: 5,
+          }}
+          onPress={() => {
+            setModalVisible(true);
+          }}
+        >
+          <Text style={{ color: "#009387", paddingRight: 5 }}>Chef's View</Text>
+          <Icon name={"eye"} size={20} color={"#009387"} />
+        </TouchableOpacity>
+        <Modal
+          visible={modalVisible}
+          onRequestClose={() => {
+            setModalVisible(false);
+          }}
+        >
+          <ChefView
+            incomingOrders={incomingOrders}
+            modifiedOrders={modifiedOrders}
+            orderType={orderType}
+            orders={updatedOrders}
+            setModalVisible={setModalVisible}
+          />
+        </Modal>
+        <MealTypeCard orders={modifiedOrders} type={"Modified"} />
+        <FlatList data={mealTypes} renderItem={renderItem} />
+      </ScrollView>
+    );
+  } else return <ListEmptyComponent img={"iceCream"} />;
 };
 
 const styles = StyleSheet.create({
@@ -514,7 +565,7 @@ const styles = StyleSheet.create({
     height: 40,
     width: width * 0.425,
     backgroundColor: "#009387",
-    justifyContent: "space-evenly",
+    justifyContent: "center",
     alignItems: "center",
     flexDirection: "row",
   },
