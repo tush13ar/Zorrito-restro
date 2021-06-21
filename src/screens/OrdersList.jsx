@@ -11,6 +11,8 @@ import Icon from "react-native-vector-icons/FontAwesome5";
 import { useDispatch, useSelector } from "react-redux";
 import { getDatabase, getLunchOrders, getDatabaseRef } from "../store/DBSlice";
 import { ListEmptyComponent } from "./SubsStack";
+import "react-native-get-random-values";
+import { v4 as uuidv4 } from "uuid";
 
 const { height, width } = Dimensions.get("window");
 
@@ -29,15 +31,11 @@ const ChefView = ({
 
   useEffect(() => {
     //console.log("allItems", allItems);
+    console.log("orders for example", orders);
   }, []);
 
   useEffect(() => {
-    //console.log("newOrdersList", orders);
-  }, [orders, incomingOrders, modifiedOrders]);
-
-  useEffect(() => {
-    //console.log("incomingOrders", incomingOrders);
-    setPrivilege(incomingOrders[1]?.privilege);
+    setPrivilege(incomingOrders[0]?.privilege || modifiedOrders[0]?.privilege);
   }, [incomingOrders, modifiedOrders, orders, lunchOrders, dinnerOrders]);
 
   useEffect(() => {
@@ -87,6 +85,19 @@ const ChefView = ({
         }, 0);
         return { ...order, cost };
       });
+      ordersWithCost.map((order) => {
+        const pastOrdersRef = getDatabaseRef(
+          "users/" + "pastOrders/" + order.key
+        );
+        const newPastOrdersRef = pastOrdersRef.push();
+        newPastOrdersRef.update({
+          items: order.items,
+          mealId: order.mealId,
+          orderId: order.orderId,
+          status: order.status,
+          orderTiming: orderType,
+        });
+      });
       const ordersWithWallet = ordersWithCost.map((order) => {
         let obj = {};
         walletList.data.forEach((wallet) => {
@@ -123,7 +134,7 @@ const ChefView = ({
           let obj = {};
 
           meals.data.forEach((meal) => {
-            if (meal.key === order.subscriptionId) {
+            if (meal.key === order.mealId) {
               const itemTypes = Object.keys(meal.details);
               let lunchItems = {};
               let dinnerItems = {};
@@ -145,12 +156,22 @@ const ChefView = ({
                     meal.details[item].price * meal.details[item].quantity;
                 }
               });
-              console.log("lunchItems", lunchItems);
-              console.log("dinnerItems", dinnerItems);
+              // console.log("lunchItems", lunchItems);
+              // console.log("dinnerItems", dinnerItems);
               obj = {
                 ...order,
-                Lunch: { items: lunchItems, status: "incoming" },
-                Dinner: { items: dinnerItems, status: "incoming" },
+                Lunch: {
+                  items: lunchItems,
+                  status: "incoming",
+                  orderId: uuidv4(),
+                  mealId: order.mealId,
+                },
+                Dinner: {
+                  items: dinnerItems,
+                  status: "incoming",
+                  orderId: uuidv4(),
+                  mealId: order.mealId,
+                },
               };
               if (order.status !== "cancelled") {
                 let walletAfterCurrentDeduction = order.wallet - order.cost;
@@ -286,6 +307,7 @@ const ChefView = ({
           },
         ]}
         onPress={() => {
+          console.log(privilege);
           changePrivilege("editable");
         }}
       >
@@ -438,19 +460,19 @@ const Orders = ({ orders, orderType }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const getDataForList = () => {
-    const dataWithSubId = orders.data.map((order) => {
-      let obj = {};
-      activeSubList.data.forEach((sub) => {
-        if (sub.key === order.key) {
-          obj = { ...order, subscriptionId: sub.subscriptionId };
-        }
-      });
-      return obj;
-    });
-    const dataWithSubName = dataWithSubId.map((order) => {
+    // const dataWithSubId = orders.data.map((order) => {
+    //   let obj = {};
+    //   activeSubList.data.forEach((sub) => {
+    //     if (sub.key === order.key) {
+    //       obj = { ...order, subscriptionId: sub.subscriptionId };
+    //     }
+    //   });
+    //   return obj;
+    // });
+    const dataWithSubName = orders.data.map((order) => {
       let obj = {};
       meals.data.forEach((meal) => {
-        if (meal.key === order.subscriptionId) {
+        if (meal.key === order.mealId) {
           obj = { ...order, subTitle: meal.title };
         }
       });

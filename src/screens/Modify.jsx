@@ -21,6 +21,7 @@ import {
 } from "@react-navigation/native";
 import { ContinueBtn } from "../components/ContinueBtn";
 import ModifyHome from "./ModifyHome";
+import BackIcon from "../components/BackIcon";
 
 const { height, width } = Dimensions.get("window");
 
@@ -107,6 +108,7 @@ const Email = ({ route }) => {
             });
         }
       } catch (error) {
+        setLoaderVisible(false);
         alert(error);
       }
     } else {
@@ -152,6 +154,11 @@ const Email = ({ route }) => {
         bottom={height * 0.05}
         label={"Create"}
         loaderVisible={loaderVisible}
+      />
+      <BackIcon
+        onPress={() => {
+          navigation.goBack();
+        }}
       />
     </View>
   );

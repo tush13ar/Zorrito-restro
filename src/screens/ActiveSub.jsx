@@ -110,7 +110,7 @@ const ActiveSub = ({ route }) => {
     name: activeData.name,
     phone: activeData.mobNum,
     email: activeData.email,
-    address: activeData.location.address,
+    address: activeData.location?.address,
   });
   const [subForm, setSubForm] = useState({
     subTitle: "",

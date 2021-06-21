@@ -12,7 +12,8 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { getDatabase } from "../store/DBSlice";
 import { LinearGradient } from "expo-linear-gradient";
-
+import "react-native-get-random-values";
+import { v4 as uuidv4 } from "uuid";
 import firebase from "firebase";
 import { ListEmptyComponent } from "./SubsStack";
 import _ from "lodash";
@@ -116,7 +117,7 @@ export const PendingSub = ({ route, navigation }) => {
   const [loaderVisible, setLoaderVisible] = useState(false);
   const formRef = useRef();
 
-  const { meals } = useSelector(getDatabase);
+  const { meals, lunchOrders } = useSelector(getDatabase);
 
   useEffect(() => {
     console.log("changeinpendingData");
@@ -139,6 +140,13 @@ export const PendingSub = ({ route, navigation }) => {
     pendingData.subscriptionId,
     pendingData.timeStamp,
   ]);
+
+  const isLunchDelivered = () => {
+    return (
+      lunchOrders.data.find((order) => order.privilege === "delivered") !==
+      undefined
+    );
+  };
 
   const approveSub = async () => {
     let value = formRef.current.getValue();
@@ -183,6 +191,7 @@ export const PendingSub = ({ route, navigation }) => {
           .app("Zorrito-restro")
           .database()
           .ref("users/" + "wallet");
+        const newLunchKey = lunchRef.p;
 
         await pendingRef.remove();
         await activeRef.update({
@@ -192,10 +201,20 @@ export const PendingSub = ({ route, navigation }) => {
           },
         });
         await lunchRef.update({
-          [pendingData.key]: { status: "incoming", items: lunchItems },
+          [pendingData.key]: {
+            status: isLunchDelivered() ? "cancelled" : "incoming",
+            items: lunchItems,
+            orderId: uuidv4(),
+            mealId: formValue.mealId,
+          },
         });
         await dinnerRef.update({
-          [pendingData.key]: { status: "incoming", items: dinnerItems },
+          [pendingData.key]: {
+            status: "incoming",
+            items: dinnerItems,
+            orderId: uuidv4(),
+            mealId: formValue.mealId,
+          },
         });
         await walletRef.update({
           [pendingData.key]: formValue.mealPrice,
