@@ -11,6 +11,7 @@ export const ContinueBtn = ({
   position,
   loaderVisible,
   disabled,
+  style,
 }) => (
   <LinearGradient
     colors={["#009387", "#23837a", "#1b6e66"]}
@@ -21,6 +22,7 @@ export const ContinueBtn = ({
       left: width * 0.05,
       borderRadius: 20,
       bottom: bottom,
+      ...style,
     }}
   >
     <TouchableOpacity

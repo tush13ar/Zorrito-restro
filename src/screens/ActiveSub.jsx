@@ -255,13 +255,27 @@ const ActiveSub = ({ route }) => {
     setWalletForm(getWallet());
   }, [walletList]);
 
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: activeData?.name,
+      headerTitleAlign: "center",
+    });
+  }, []);
+
   const formRef = useRef();
   const subFormRef = useRef();
   const walletFormRef = useRef();
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView style={{ flex: 1, marginTop: 70 }}>
+    <View
+      style={{
+        flex: 1,
+        marginTop: height * 0.12,
+        paddingTop: height * 0.02,
+        backgroundColor: "#FFFFFF",
+      }}
+    >
+      <ScrollView style={{ flex: 1 }}>
         <Icon
           name={
             metaDataOptions.fields.name.editable &&
@@ -365,11 +379,6 @@ const ActiveSub = ({ route }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-      <BackIcon
-        onPress={() => {
-          navigation.goBack();
-        }}
-      />
     </View>
   );
 };
@@ -381,7 +390,7 @@ const ActiveSubStack = () => (
     <Stack.Screen
       name="ActiveSub"
       component={ActiveSub}
-      options={{ headerShown: false }}
+      options={{ headerTransparent: true, headerTitle: null }}
     />
     <Stack.Screen name="Menu" component={CustomizeScreen} />
     <Stack.Screen name="Cart" component={Cart} />

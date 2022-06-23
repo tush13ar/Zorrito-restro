@@ -77,9 +77,14 @@ const userModel = t.struct({
 });
 
 const options = {
+  i18n: {
+    optional: "",
+    required: "",
+  },
   fields: {
     address: {
       multiline: true,
+      label: "Address/Location",
     },
     email: {
       editable: false,
@@ -108,7 +113,7 @@ export const PendingSub = ({ route, navigation }) => {
     name: pendingData.name,
     phone: pendingData.mobNum,
     email: pendingData.email,
-    address: pendingData?.location?.address,
+    address: pendingData?.location?.address || pendingData?.tempLocation,
     mealTitle: null,
     mealNum: pendingData.mealNum,
     mealPrice: null,
@@ -239,9 +244,12 @@ export const PendingSub = ({ route, navigation }) => {
       style={{
         flex: 1,
         justifyContent: "flex-start",
+        marginTop: height * 0.12,
+        // paddingTop: height * 0.02,
+        backgroundColor: "#FFFFFF",
       }}
     >
-      <ScrollView style={{ flex: 1, marginBottom: 60, marginTop: 60 }}>
+      <ScrollView style={{ flex: 1, marginBottom: 60 }}>
         <Form
           ref={formRef}
           type={userModel}
@@ -250,41 +258,14 @@ export const PendingSub = ({ route, navigation }) => {
           options={options}
         />
       </ScrollView>
-      <BackIcon
-        onPress={() => {
-          navigation.goBack();
-        }}
-      />
+
       <ContinueBtn
         loaderVisible={loaderVisible}
-        label={"Approve"}
+        label={"APPROVE"}
         onPress={approveSub}
         bottom={10}
         position={"absolute"}
       />
-      {/* <LinearGradient
-        colors={["#009387", "#23837a", "#1b6e66"]}
-        style={{
-          height: 40,
-          width: width * 0.9,
-          position: "absolute",
-          left: width * 0.05,
-          borderRadius: 20,
-          bottom: 25,
-        }}
-      >
-        <TouchableOpacity
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            width: width * 0.9,
-            height: 40,
-          }}
-          onPress={approveSub}
-        >
-          <Text style={{ color: "white" }}>Approve</Text>
-        </TouchableOpacity>
-      </LinearGradient> */}
     </View>
   );
 };

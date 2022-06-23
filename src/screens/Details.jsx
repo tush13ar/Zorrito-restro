@@ -17,7 +17,7 @@ const { width, height } = Dimensions.get("window");
 const Details = () => {
   const [name, setName] = useState(null);
   const [phone, setPhone] = useState(null);
-
+  const [tempLocation, setTempLocation] = useState(null);
   const [subType, setSubType] = useState(true);
   const [selectedMeal, setSelectedMeal] = useState("m1");
   const { meals } = useSelector(getDatabase);
@@ -49,6 +49,7 @@ const Details = () => {
     navigation.navigate("Email", {
       name,
       phone,
+      tempLocation,
       selectedMeal,
       subType,
     });
@@ -60,10 +61,12 @@ const Details = () => {
         flex: 1,
         justifyContent: "flex-start",
         backgroundColor: "#FFFFFF",
+        marginTop: height * 0.12,
+        paddingTop: height * 0.02,
       }}
     >
-      <ScrollView style={{ flex: 1, paddingTop: height * 0.12 }}>
-        <Text style={styles.label}>Enter User name</Text>
+      <ScrollView style={{ flex: 1 }}>
+        <Text style={styles.label}>Enter User's name</Text>
         <TextInput
           style={styles.txtInput}
           placeholder={"John Doe"}
@@ -79,6 +82,15 @@ const Details = () => {
             if (val.toString().length <= 10) onChangePhone(val);
           }}
           keyboardType={"phone-pad"}
+        />
+        <Text style={styles.label}>Enter User's Location</Text>
+        <TextInput
+          style={styles.txtInput}
+          placeholder={"Enter Rough Location like Area/Locality here"}
+          value={tempLocation}
+          onChangeText={(val) => {
+            setTempLocation(val);
+          }}
         />
         <Text style={styles.label}>Meal</Text>
         <View
@@ -133,42 +145,14 @@ const Details = () => {
                   .weeklyPrice.toString()
           }
         />
-
         <ContinueBtn
           label={"Continue"}
           onPress={onPressContinue}
           position={"relative"}
-          bottom={0}
+          // bottom={20}
+          style={{ marginBottom: 20 }}
         />
       </ScrollView>
-      <BackIcon
-        onPress={() => {
-          navigation.goBack();
-        }}
-      />
-      {/* <LinearGradient
-        colors={["#009387", "#23837a", "#1b6e66"]}
-        style={{
-          height: 40,
-          width: width * 0.9,
-          position: "absolute",
-          left: width * 0.05,
-          borderRadius: 20,
-          bottom: 30,
-        }}
-      >
-        <TouchableOpacity
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            width: width * 0.9,
-            height: 40,
-          }}
-          onPress={onPressContinue}
-        >
-          <Text style={{ color: "white" }}>Continue</Text>
-        </TouchableOpacity>
-      </LinearGradient> */}
     </View>
   );
 };

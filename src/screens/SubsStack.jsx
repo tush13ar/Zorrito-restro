@@ -1,42 +1,33 @@
-import React, { useEffect, useState, useLayoutEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-  Image,
-} from "react-native";
-import { createStackNavigator } from "@react-navigation/stack";
 import {
   CommonActions,
-  StackActions,
   useFocusEffect,
   useNavigation,
 } from "@react-navigation/native";
-import { Card } from "react-native-elements";
+import { createStackNavigator } from "@react-navigation/stack";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
 import { useDispatch, useSelector } from "react-redux";
+import UserCard from "../components/UserCard";
+import { colors } from "../constants/colors";
 import { getUser } from "../store/AuthSlice";
 import {
   getDatabase,
-  getUsersMetaData,
+  getDinnerOrders,
+  getLunchOrders,
   getMeals,
   getMenuItems,
   getPendingSubList,
-  getLunchOrders,
-  getDinnerOrders,
+  getUsersMetaData,
 } from "../store/DBSlice";
+import ActiveSubStack, { ActiveList } from "./ActiveSub";
 import PendingSub from "./PendingSub";
-import ActiveSub, { ActiveList } from "./ActiveSub";
-import ActiveSubStack from "./ActiveSub";
-import { colors } from "../constants/colors";
-import { useRef } from "react";
-import { cos } from "react-native-reanimated";
-import { useCallback } from "react";
-import Icon from "react-native-vector-icons/FontAwesome5";
-import { Linking } from "react-native";
-import UserCard from "../components/UserCard";
 
 const { height, width } = Dimensions.get("window");
 
@@ -215,10 +206,25 @@ const SubsStack = () => {
     authDetails: { userId },
   } = useSelector(getUser);
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name={"Subscriptions"} component={Subscriptions} />
-      <Stack.Screen name={"Pending"} component={PendingSub} />
-      <Stack.Screen name={"Active"} component={ActiveSubStack} />
+    <Stack.Navigator>
+      <Stack.Screen
+        name={"Subscriptions"}
+        component={Subscriptions}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name={"Pending"}
+        component={PendingSub}
+        options={{
+          headerTransparent: true,
+          headerTitle: "Approve Subscription",
+        }}
+      />
+      <Stack.Screen
+        name={"Active"}
+        component={ActiveSubStack}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 };
